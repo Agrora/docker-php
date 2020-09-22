@@ -1,24 +1,24 @@
 #!/bin/bash
 docker build -t $DOCKER_REPO:cli \
-    --build-arg APP_ENV=production \
     --build-arg SERVICE_TYPE=cli \
+    --build-arg APP_ENV=production \
     .
 
 docker build -t $DOCKER_REPO:cli-dev \
-    --build-arg APP_ENV=dev \
     --build-arg SERVICE_TYPE=cli
+    --build-arg APP_ENV=dev \
     .
 
 
 
 docker build -t $DOCKER_REPO:fpm \
-    --build-arg APP_ENV=production \
     --build-arg SERVICE_TYPE=fpm \
+    --build-arg APP_ENV=production \
     .
 
 docker build -t $DOCKER_REPO:fpm-dev \
-    --build-arg APP_ENV=dev \
     --build-arg SERVICE_TYPE=fpm \
+    --build-arg APP_ENV=dev \
     .
 
 
