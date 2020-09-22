@@ -1,8 +1,34 @@
 #!/bin/bash
-docker build -t $IMAGE_NAME \
-    --build-arg PHP_VERSION=$PHP_VERSION \
-    --build-arg APP_ENV=$APP_ENV \
-    --build-arg SERVICE_TYPE=$SERVICE_TYPE \
-    --build-arg CORS_ALLOWED_METHODS=$CORS_ALLOWED_METHODS \
-    --build-arg CORS_ALLOWED_HEADERS=$CORS_ALLOWED_HEADERS \
+docker build -t $IMAGE_NAME:cli \
+    --build-arg APP_ENV=production \
+    --build-arg SERVICE_TYPE=cli \
+    .
+
+docker build -t $IMAGE_NAME:cli-dev \
+    --build-arg APP_ENV=dev \
+    --build-arg SERVICE_TYPE=cli
+    .
+
+
+
+docker build -t $IMAGE_NAME:fpm \
+    --build-arg APP_ENV=production \
+    --build-arg SERVICE_TYPE=fpm \
+    .
+
+docker build -t $IMAGE_NAME:fpm-dev \
+    --build-arg APP_ENV=dev \
+    --build-arg SERVICE_TYPE=fpm \
+    .
+
+
+
+docker build -t $IMAGE_NAME:fpm-nginx \
+    --build-arg APP_ENV=production \
+    --build-arg SERVICE_TYPE=fpm-nginx \
+    .
+
+docker build -t $IMAGE_NAME:fpm-nginx-dev \
+    --build-arg APP_ENV=dev \
+    --build-arg SERVICE_TYPE=fpm-nginx \
     .
