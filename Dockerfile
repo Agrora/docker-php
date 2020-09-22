@@ -1,44 +1,91 @@
-FROM alpine:3.12
-LABEL Maintainer="Tim de Pater <code@trafex.nl>" \
-      Description="Lightweight container with Nginx 1.18 & PHP-FPM 7.3 based on Alpine Linux."
+# Build Args (pass to docker build with --build-arg=ARG_NAME=arg_value)
+ARG PHP_VERSION=7.4.10
+ARG APP_ENV=dev
+ARG SERVICE_TYPE=cli
+ARG CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
+ARG CORS_ALLOWED_HEADERS=DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,Authorization
 
-# Install packages and remove default server definition
-RUN apk --no-cache add php7 php7-fpm php7-opcache php7-mysqli php7-json php7-openssl php7-curl \
-    php7-zlib php7-xml php7-phar php7-intl php7-dom php7-xmlreader php7-ctype php7-session \
-    php7-mbstring php7-gd nginx supervisor curl && \
-    rm /etc/nginx/conf.d/default.conf
+FROM scratch
 
-# Configure nginx
-COPY config/nginx.conf /etc/nginx/nginx.conf
+MAINTAINER Torben Köhn <t.koehn@outlook.com>
 
-# Configure PHP-FPM
-COPY config/fpm-pool.conf /etc/php7/php-fpm.d/www.conf
-COPY config/php.ini /etc/php7/conf.d/custom.ini
+# Stage 1: Select base images for SERVICE_TYPE
+FROM php:${PHP_VERSION}-buster AS php-cli
 
-# Configure supervisord
-COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+FROM php:${PHP_VERSION}-fpm-buster AS php-fpm
+ONBUILD COPY config/fpm-pool.conf /etc/php7/php-fpm.d/www.conf
 
-# Setup document root
-RUN mkdir -p /var/www/html
+FROM php-fpm AS php-fpm-nginx
 
-# Make sure files/folders needed by the processes are accessable when they run under the nobody user
-RUN chown -R nobody.nobody /var/www/html && \
-  chown -R nobody.nobody /run && \
-  chown -R nobody.nobody /var/lib/nginx && \
-  chown -R nobody.nobody /var/log/nginx
+# Stage 2: Install dependencies and configs for APP_ENV
+FROM php-${SERVICE_TYPE} AS build-production
+# - Install PHP and PHP Extension related dependencies
+ONBUILD RUN apt-get update && apt-get install -y \
+    gnupg curl sudo python git mariadb-client zip unzip p7zip \
+    libmcrypt-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+    libmagickwand-dev imagemagick ghostscript libzip-dev \
+    librabbitmq-dev libssh-dev libxml2-dev libonig-dev \
+    zlib1g-dev libicu-dev g++ graphviz \
+    --no-install-recommends
+# - Install common PHP Extensions
+ONBUILD RUN docker-php-ext-configure gd && \
+    pecl install imagick amqp && \
+    docker-php-ext-configure gd && \
+    docker-php-ext-configure intl && \
+    docker-php-ext-enable imagick amqp && \
+    docker-php-ext-install -j$(nproc) gd && \
+    docker-php-ext-install intl pdo_mysql zip soap bcmath && \
+    docker-php-source delete
+# - Install Composer
+ONBUILD RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
+    php composer-setup.php && \
+    php -r "unlink('composer-setup.php');" && \
+    mv composer.phar /usr/local/bin/composer
+# - Configure PHP and Imagick
+ONBUILD COPY config/php.ini /usr/local/etc/php/conf.d/00-app.ini
+ONBUILD COPY config/imagick-policy.xml /etc/ImageMagick-6/policy.xml
 
-# Switch to use a non-root user from here on
-USER nobody
+FROM build-production AS build-dev
+# - Install XDebug Extension
+ONBUILD RUN  pecl install xdebug && \
+    docker-php-ext-enable xdebug
+# - Configure XDebug
+ONBUILD COPY config/php-dev.ini /usr/local/etc/php/conf.d/10-app-dev.ini
 
-# Add application
-WORKDIR /var/www/html
-COPY --chown=nobody src/ /var/www/html/
+# Stage 3: Install and configure Nginx+Supervisor for SERVICE_TYPE
+FROM build-${APP_ENV} AS service-cli
 
-# Expose the port nginx is reachable on
-EXPOSE 8080
+FROM build-${APP_ENV} AS service-fpm
 
-# Let supervisord start nginx & php-fpm
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+FROM build-${APP_ENV} AS service-fpm-nginx
+ENV CORS_ALLOWED_METHODS=${CORS_ALLOWED_METHODS}
+ENV CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS}
 
-# Configure a healthcheck to validate that everything is up&running
-HEALTHCHECK --timeout=10s CMD curl --silent --fail http://127.0.0.1:8080/fpm-ping
+# - Install Nginx, Supervisor and envsubst
+ONBUILD RUN apt-get install -y nginx supervisor gettext-base
+# - Configure Nginx (with ENV Variable support)
+ONBUILD COPY config/nginx.conf.template /etc/nginx/nginx.conf.template
+ONBUILD RUN envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && rm /etc/nginx/nginx.conf.template
+
+# - Configure Supervisor
+ONBUILD COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# - Let all services run as user www-data
+ONBUILD RUN mkdir -p /var/www/html
+ONBUILD RUN chown -R www-data:www-data /var/www/html && \
+  chown -R www-data:www-data /run && \
+  chown -R www-data:www-data /var/lib/nginx && \
+  chown -R www-data:www-data /var/log/nginx
+
+ONBUILD USER www-data
+
+# - Expose Nginx
+ONBUILD WORKDIR /var/www/html
+ONBUILD EXPOSE 8080
+ONBUILD CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+# - Configure health check
+ONBUILD HEALTHCHECK --timeout=10s CMD curl --silent --fail http://127.0.0.1:8080/fpm-ping
+
+# Stage 4: Buld the final image
+FROM service-${SERVICE_TYPE}
