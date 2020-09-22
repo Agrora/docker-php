@@ -23,12 +23,12 @@ docker build -t $DOCKER_REPO:fpm-dev \
 
 
 
-docker build -t $IMAGE_NAME:fpm-nginx \
-    --build-arg APP_ENV=production \
+docker build -t $DOCKER_REPO:fpm-nginx \
     --build-arg SERVICE_TYPE=fpm-nginx \
+    --build-arg APP_ENV=production \
     .
 
-docker build -t $IMAGE_NAME:fpm-nginx-dev \
-    --build-arg APP_ENV=dev \
+docker build -t $DOCKER_REPO:fpm-nginx-dev \
     --build-arg SERVICE_TYPE=fpm-nginx \
+    --build-arg APP_ENV=dev \
     .
