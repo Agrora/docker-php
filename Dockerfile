@@ -65,7 +65,7 @@ ENV CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS}
 ONBUILD RUN apt-get install -y nginx supervisor gettext-base
 # - Configure Nginx (with ENV Variable support)
 ONBUILD COPY config/nginx.conf.template /etc/nginx/nginx.conf.template
-ONBUILD RUN envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && rm /etc/nginx/nginx.conf.template
+ONBUILD RUN envsubst '\$CORS_ALLOWED_METHODS \$CORS_ALLOWED_HEADERS' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && rm /etc/nginx/nginx.conf.template
 
 # - Configure Supervisor
 ONBUILD COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
