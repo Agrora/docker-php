@@ -2,6 +2,7 @@
 ARG PHP_VERSION=7.4.10
 ARG APP_ENV=dev
 ARG SERVICE_TYPE=cli
+ARG DOCUMENT_ROOT=/var/www/html
 ARG CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
 ARG CORS_ALLOWED_HEADERS=DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,Authorization
 
@@ -58,14 +59,14 @@ FROM build-${APP_ENV} AS service-cli
 FROM build-${APP_ENV} AS service-fpm
 
 FROM build-${APP_ENV} AS service-fpm-nginx
-ENV CORS_ALLOWED_METHODS=${CORS_ALLOWED_METHODS}
-ENV CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS}
+ENV DOCUMENT_ROOT ${DOCUMENT_ROOT}
+ENV CORS_ALLOWED_METHODS ${CORS_ALLOWED_METHODS}
+ENV CORS_ALLOWED_HEADERS ${CORS_ALLOWED_HEADERS}
 
-# - Install Nginx, Supervisor and envsubst
-ONBUILD RUN apt-get install -y nginx supervisor gettext-base
-# - Configure Nginx (with ENV Variable support)
-ONBUILD COPY config/nginx.conf.template /etc/nginx/nginx.conf.template
-ONBUILD RUN envsubst '\$CORS_ALLOWED_METHODS \$CORS_ALLOWED_HEADERS' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && rm /etc/nginx/nginx.conf.template
+# - Install Nginx and Supervisor
+ONBUILD RUN apt-get install -y nginx libnginx-mod-http-ndk libnginx-mod-http-lua supervisor
+# - Configure Nginx
+ONBUILD COPY config/nginx.conf /etc/nginx/nginx.conf
 
 # - Configure Supervisor
 ONBUILD COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -80,7 +81,7 @@ ONBUILD RUN chown -R www-data:www-data /var/www/html && \
 ONBUILD USER www-data
 
 # - Expose Nginx
-ONBUILD WORKDIR /var/www/html
+ONBUILD WORKDIR ${DOCUMENT_ROOT}
 ONBUILD EXPOSE 8080
 ONBUILD CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
