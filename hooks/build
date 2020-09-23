@@ -5,7 +5,7 @@ docker build -t $DOCKER_REPO:cli \
     .
 
 docker build -t $DOCKER_REPO:cli-dev \
-    --build-arg SERVICE_TYPE=cli
+    --build-arg SERVICE_TYPE=cli \
     --build-arg APP_ENV=dev \
     .
 
