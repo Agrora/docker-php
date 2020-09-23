@@ -65,6 +65,7 @@ ENV CORS_ALLOWED_HEADERS ${CORS_ALLOWED_HEADERS}
 
 # - Install Nginx and Supervisor
 ONBUILD RUN apt-get install -y nginx libnginx-mod-http-ndk libnginx-mod-http-lua supervisor
+
 # - Configure Nginx
 ONBUILD COPY config/nginx.conf /etc/nginx/nginx.conf
 
@@ -81,7 +82,7 @@ ONBUILD RUN chown -R www-data:www-data /var/www/html && \
 ONBUILD USER www-data
 
 # - Expose Nginx
-ONBUILD WORKDIR ${DOCUMENT_ROOT}
+ONBUILD WORKDIR $DOCUMENT_ROOT
 ONBUILD EXPOSE 8080
 ONBUILD CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
