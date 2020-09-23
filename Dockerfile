@@ -2,9 +2,9 @@
 ARG PHP_VERSION=7.4.10
 ARG APP_ENV=dev
 ARG SERVICE_TYPE=cli
-ARG DOCUMENT_ROOT=/var/www/html
-ARG CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
-ARG CORS_ALLOWED_HEADERS=DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,Authorization
+ARG DOCUMENT_ROOT
+ARG CORS_ALLOWED_METHODS
+ARG CORS_ALLOWED_HEADERS
 
 FROM scratch
 
@@ -59,9 +59,9 @@ FROM build-${APP_ENV} AS service-cli
 FROM build-${APP_ENV} AS service-fpm
 
 FROM build-${APP_ENV} AS service-fpm-nginx
-ENV DOCUMENT_ROOT ${DOCUMENT_ROOT}
-ENV CORS_ALLOWED_METHODS ${CORS_ALLOWED_METHODS}
-ENV CORS_ALLOWED_HEADERS ${CORS_ALLOWED_HEADERS}
+ENV DOCUMENT_ROOT ${DOCUMENT_ROOT:-/var/www/html}
+ENV CORS_ALLOWED_METHODS ${CORS_ALLOWED_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}
+ENV CORS_ALLOWED_HEADERS ${CORS_ALLOWED_HEADERS:-DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,Authorization}
 
 # - Install Nginx and Supervisor
 ONBUILD RUN apt-get install -y nginx libnginx-mod-http-ndk libnginx-mod-http-lua supervisor
@@ -82,7 +82,7 @@ ONBUILD RUN chown -R www-data:www-data /var/www/html && \
 ONBUILD USER www-data
 
 # - Expose Nginx
-ONBUILD WORKDIR $DOCUMENT_ROOT
+ONBUILD WORKDIR ${DOCUMENT_ROOT}
 ONBUILD EXPOSE 8080
 ONBUILD CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
