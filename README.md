@@ -75,18 +75,54 @@ $ docker run \
     -e DOCUMENT_ROOT=/your/own/root
     -e CORS_ALLOWED_METHODS=GET,POST
     -e CORS_ALLOWED_HEADERS=X-Custom-Header
+    -e FALLBACK_ROUTER_PATH=route-404.php
     agrora/php:fpm-nginx
 ```
+
+Environment-Variables:
+- `DOCUMENT_ROOT`
+
+   (Default: `/var/www/html`)
+
+   The folder Nginx serves files from. If possible, don't point
+   this directly to your PHP sources, but to a folder
+   containing only the front-controller file.
+   
+   You can, however, also serve unusual PHP applications like WordPress.
+- `CORS_ALLOWED_METHODS`
+   
+   (Default: `GET,POST,PUT,PATCH,DELETE`)
+
+   The HTTP Methods to allow for CORS requests
+- `CORS_ALLOWED_HEADERS`
+   
+   (Default: `DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,Authorization`)
+   
+   The inbound allowed HTTP headers for CORS requests
+- `FALLBACK_ROUTER_PATH`
+
+   (Default: `index.php`)
+
+   A PHP file path that will handle requests that couldn't be resolved to a file.
+   
+   By default, the index.php will always be the Front Router, similar
+   to how most frameworks work.
+   
+   You can also turn the request into a query string with this
+   by using `index.php?request=` as a value. That way
+   you can retrieve the request uri info in a `request`-query value
 
 As Nginx doesn't forward OPTIONS requests, it handles them itself and
 always returns the request origin as an allowed origin.
 
-If you want true CORS protection, use a reverse proxy in front of
-the Nginx that handles CORS headers.
+**If you want true, custom CORS protection, use a reverse proxy in front of
+the Nginx that handles CORS headers.**
 
 Alternatively you could overwrite the Nginx Configuration file
 or add an own one yourself. Either overwrite `/etc/nginx/nginx.conf`
 or add a `/etc/nginx/conf.d/your-own.conf`.
+
+Since Lua is enabled, you can also control CORS logic via Lua.
 
 Good to deploy front-facing PHP web applications.
 
