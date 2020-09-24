@@ -1,9 +1,26 @@
 #!/bin/bash
 docker push $DOCKER_REPO:cli
 docker push $DOCKER_REPO:cli-dev
+docker push $DOCKER_REPO:7-cli
+docker push $DOCKER_REPO:7-cli-dev
+docker push $DOCKER_REPO:latest
 
 docker push $DOCKER_REPO:fpm
 docker push $DOCKER_REPO:fpm-dev
+docker push $DOCKER_REPO:7-fpm
+docker push $DOCKER_REPO:7-fpm-dev
 
 docker push $DOCKER_REPO:fpm-nginx
 docker push $DOCKER_REPO:fpm-nginx-dev
+docker push $DOCKER_REPO:7-fpm-nginx
+docker push $DOCKER_REPO:7-fpm-nginx-dev
+
+
+docker push $DOCKER_REPO:8-cli
+docker push $DOCKER_REPO:8-cli-dev
+
+docker push $DOCKER_REPO:8-fpm
+docker push $DOCKER_REPO:8-fpm-dev
+
+docker push $DOCKER_REPO:8-fpm-nginx
+docker push $DOCKER_REPO:8-fpm-nginx-dev
