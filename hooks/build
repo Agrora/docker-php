@@ -7,13 +7,3 @@ docker build -t $DOCKER_REPO:fpm -t $DOCKER_REPO:7-fpm --build-arg SERVICE_TYPE=
 
 docker build -t $DOCKER_REPO:fpm-nginx-dev -t $DOCKER_REPO:7-fpm-nginx-dev --build-arg SERVICE_TYPE=fpm-nginx .
 docker build -t $DOCKER_REPO:fpm-nginx -t $DOCKER_REPO:7-fpm-nginx --build-arg SERVICE_TYPE=fpm-nginx --build-arg APP_ENV=production .
-
-
-docker build -t $DOCKER_REPO:8-cli-dev --build-arg PHP_VERSION=8.0-rc --build-arg SERVICE_TYPE=cli .
-docker build -t $DOCKER_REPO:8-cli --build-arg PHP_VERSION=8.0-rc --build-arg SERVICE_TYPE=cli --build-arg APP_ENV=production .
-
-docker build -t $DOCKER_REPO:8-fpm-dev --build-arg PHP_VERSION=8.0-rc --build-arg SERVICE_TYPE=fpm .
-docker build -t $DOCKER_REPO:8-fpm --build-arg PHP_VERSION=8.0-rc --build-arg SERVICE_TYPE=fpm --build-arg APP_ENV=production .
-
-docker build -t $DOCKER_REPO:8-fpm-nginx-dev --build-arg PHP_VERSION=8.0-rc --build-arg SERVICE_TYPE=fpm-nginx .
-docker build -t $DOCKER_REPO:8-fpm-nginx --build-arg PHP_VERSION=8.0-rc --build-arg SERVICE_TYPE=fpm-nginx --build-arg APP_ENV=production .
