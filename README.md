@@ -5,7 +5,7 @@ An opinionated PHP development and production container with Nginx support.
 
 ## What does it contain?
 
-- PHP 7.4.10 or 8.0-rc
+- PHP 7.4.10
 - PHP Extensions: imagick, amqp, gd, intl, pdo_mysql, zip, soap, bcmath
 - Composer
 - Dev Build contains pre-configured XDebug
@@ -15,7 +15,7 @@ An opinionated PHP development and production container with Nginx support.
 
 Multiple tags are available that provide different feature sets.
 
-### latest, cli, 7-cli, 8-cli
+### latest, cli, 7-cli
 
 Contains only PHP and the extensions.
 Good to run PHP-based processes in isolated containers.
@@ -25,7 +25,7 @@ $ docker run agrora/php php -i
 # Prints the PHP Info of the container
 ```
 
-### cli-dev, 7-cli-dev, 8-cli-dev
+### cli-dev, 7-cli-dev
 
 Contains only PHP and the extensions including XDebug.
 Good to develop PHP-based processes in isolated containers.
@@ -38,7 +38,7 @@ xdebug support => enabled
 ...
 ```
 
-### fpm, 7-fpm, 8-fpm
+### fpm, 7-fpm
 
 Contains PHP, the extensions and PHP-FPM.
 Good to run PHP applications behind a reverse proxy or any FastCGI.
@@ -47,7 +47,7 @@ Good to run PHP applications behind a reverse proxy or any FastCGI.
 $ docker run -p 9000:9000 agrora/php:fpm
 ```
 
-### fpm-dev, 7-fpm-dev, 8-fpm-dev
+### fpm-dev, 7-fpm-dev
 
 Contains PHP, the extensions including XDebug and PHP-FPM on port 9000.
 Good to develop PHP applications behind a reverse proxy or any FastCGI.
@@ -56,7 +56,7 @@ Good to develop PHP applications behind a reverse proxy or any FastCGI.
 $ docker run -p 9000:9000 agrora/php:fpm-dev
 ```
 
-### fpm-nginx, 7-fpm-nginx, 8-fpm-nginx
+### fpm-nginx, 7-fpm-nginx
 
 Contains PHP, the extensions and Supervisor which manages
 Nginx and PHP-FPM
@@ -126,7 +126,7 @@ Since Lua is enabled, you can also control CORS logic via Lua.
 
 Good to deploy front-facing PHP web applications.
 
-### fpm-nginx-dev, 7-fpm-nginx-dev, 8-fpm-nginx-dev
+### fpm-nginx-dev, 7-fpm-nginx-dev
 
 Same as the fpm-nginx container, but with enabled XDebug.
 Good to develop front-facing PHP web applications.
