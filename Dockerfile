@@ -50,6 +50,8 @@ ONBUILD RUN  pecl install xdebug && \
 # - Configure XDebug
 ONBUILD COPY config/php-dev.ini /usr/local/etc/php/conf.d/10-app-dev.ini
 
+ONBUILD EXPOSE 9100
+
 # Stage 3: Install and configure Nginx+Supervisor for SERVICE_TYPE
 FROM build-${APP_ENV} AS service-cli
 
