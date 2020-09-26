@@ -76,6 +76,7 @@ ONBUILD COPY config/nginx.conf /etc/nginx/nginx.conf
 ONBUILD COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # - Let all services run as user www-data and ensure correct access rights
+ONBUILD RUN addgroup --system www-data && adduser --no-create-home --system --ingroup www-data www-data
 ONBUILD RUN if [ -d "${DOCUMENT_ROOT}" ]; then rm -Rf ${DOCUMENT_ROOT}; fi && mkdir -p ${DOCUMENT_ROOT}
 ONBUILD RUN chown -R www-data:www-data ${DOCUMENT_ROOT} /run /var/lib/nginx /var/log/nginx
 
