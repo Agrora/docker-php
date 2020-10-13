@@ -17,6 +17,13 @@ FROM php-fpm AS php-fpm-nginx
 
 # Stage 2: Install dependencies and configs for APP_ENV
 FROM php-${SERVICE_TYPE} AS build-production
+
+# - Create a "php" user to run PHP apps with it
+ONBUILD RUN addgroup --system php && adduser --no-create-home --system --ingroup php php
+
+# Reconfigure composer's cache dir
+ONBUILD ENV COMPOSER_CACHE_DIR=/tmp/.composer
+
 # - Install PHP and PHP Extension related dependencies
 ONBUILD RUN apt-get update && apt-get install -y \
     gnupg curl sudo python git mariadb-client zip unzip p7zip \
@@ -38,10 +45,13 @@ ONBUILD RUN docker-php-ext-configure gd && \
 ONBUILD RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
     php composer-setup.php && \
     php -r "unlink('composer-setup.php');" && \
-    mv composer.phar /usr/local/bin/composer
+    mv composer.phar /usr/local/bin/composer && \
+    sudo chown -R php:php ${COMPOSER_CACHE_DIR}
 # - Configure PHP and Imagick
 ONBUILD COPY config/php.ini /usr/local/etc/php/conf.d/00-app.ini
 ONBUILD COPY config/imagick-policy.xml /etc/ImageMagick-6/policy.xml
+
+ONBUILD USER php
 
 FROM build-production AS build-dev
 # - Install XDebug Extension
@@ -75,12 +85,9 @@ ONBUILD COPY config/nginx.conf /etc/nginx/nginx.conf
 # - Configure Supervisor
 ONBUILD COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# - Let all services run as user www-data and ensure correct access rights
-ONBUILD RUN addgroup --system www-data && adduser --no-create-home --system --ingroup www-data www-data
+# - Let all services run as php user and ensure correct access rights
 ONBUILD RUN if [ -d "${DOCUMENT_ROOT}" ]; then rm -Rf ${DOCUMENT_ROOT}; fi && mkdir -p ${DOCUMENT_ROOT}
-ONBUILD RUN chown -R www-data:www-data ${DOCUMENT_ROOT} /run /var/lib/nginx /var/log/nginx
-
-ONBUILD USER www-data
+ONBUILD RUN chown -R php:php ${DOCUMENT_ROOT} /run /var/lib/nginx /var/log/nginx
 
 # - Expose Nginx
 ONBUILD WORKDIR ${DOCUMENT_ROOT}
