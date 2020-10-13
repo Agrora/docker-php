@@ -22,7 +22,7 @@ FROM php-${SERVICE_TYPE} AS build-production
 ONBUILD RUN addgroup --system php && adduser --no-create-home --system --ingroup php php
 
 # Reconfigure composer's cache dir
-ONBUILD ENV COMPOSER_CACHE_DIR=/tmp/.composer
+ONBUILD ENV COMPOSER_CACHE_DIR=/var/composer
 
 # - Install PHP and PHP Extension related dependencies
 ONBUILD RUN apt-get update && apt-get install -y \
@@ -46,7 +46,8 @@ ONBUILD RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.ph
     php composer-setup.php && \
     php -r "unlink('composer-setup.php');" && \
     mv composer.phar /usr/local/bin/composer && \
-    sudo chown -R php:php ${COMPOSER_CACHE_DIR}
+    mkdir ${COMPOSER_CACHE_DIR} &&
+    chown -R php:php ${COMPOSER_CACHE_DIR}
 # - Configure PHP and Imagick
 ONBUILD COPY config/php.ini /usr/local/etc/php/conf.d/00-app.ini
 ONBUILD COPY config/imagick-policy.xml /etc/ImageMagick-6/policy.xml
