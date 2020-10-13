@@ -19,7 +19,8 @@ FROM php-fpm AS php-fpm-nginx
 FROM php-${SERVICE_TYPE} AS build-production
 
 # - Create a "php" user to run PHP apps with it
-ONBUILD RUN addgroup --system php && adduser --no-create-home --system --ingroup php php
+ONBUILD RUN addgroup --system php && adduser --no-create-home --system --ingroup php php && \
+    chown php:php -R /tmp
 
 # Reconfigure composer's cache dir
 ONBUILD ENV COMPOSER_CACHE_DIR=/var/composer
@@ -52,9 +53,8 @@ ONBUILD RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.ph
 ONBUILD COPY config/php.ini /usr/local/etc/php/conf.d/00-app.ini
 ONBUILD COPY config/imagick-policy.xml /etc/ImageMagick-6/policy.xml
 
-ONBUILD USER php
-
 FROM build-production AS build-dev
+
 # - Install XDebug Extension
 ONBUILD RUN  pecl install xdebug && \
     docker-php-ext-enable xdebug
@@ -65,8 +65,10 @@ ONBUILD EXPOSE 9100
 
 # Stage 3: Install and configure Nginx+Supervisor for SERVICE_TYPE
 FROM build-${APP_ENV} AS service-cli
+ONBUILD USER php
 
 FROM build-${APP_ENV} AS service-fpm
+ONBUILD USER php
 
 FROM build-${APP_ENV} AS service-fpm-nginx
 ARG DOCUMENT_ROOT
@@ -89,6 +91,7 @@ ONBUILD COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # - Let all services run as php user and ensure correct access rights
 ONBUILD RUN if [ -d "${DOCUMENT_ROOT}" ]; then rm -Rf ${DOCUMENT_ROOT}; fi && mkdir -p ${DOCUMENT_ROOT}
 ONBUILD RUN chown -R php:php ${DOCUMENT_ROOT} /run /var/lib/nginx /var/log/nginx
+ONBUILD USER php
 
 # - Expose Nginx
 ONBUILD WORKDIR ${DOCUMENT_ROOT}
