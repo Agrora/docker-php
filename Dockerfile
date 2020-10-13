@@ -46,7 +46,7 @@ ONBUILD RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.ph
     php composer-setup.php && \
     php -r "unlink('composer-setup.php');" && \
     mv composer.phar /usr/local/bin/composer && \
-    mkdir ${COMPOSER_CACHE_DIR} &&
+    mkdir ${COMPOSER_CACHE_DIR} && \
     chown -R php:php ${COMPOSER_CACHE_DIR}
 # - Configure PHP and Imagick
 ONBUILD COPY config/php.ini /usr/local/etc/php/conf.d/00-app.ini
