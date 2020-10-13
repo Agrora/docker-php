@@ -5,7 +5,7 @@ ARG SERVICE_TYPE=cli
 
 FROM scratch
 
-MAINTAINER Torben Köhn <t.koehn@outlook.com>
+LABEL author="Torben Köhn <t.koehn@outlook.com>"
 
 # Stage 1: Select base images for SERVICE_TYPE
 FROM php:${PHP_VERSION}-buster AS php-cli
@@ -19,10 +19,11 @@ FROM php-fpm AS php-fpm-nginx
 FROM php-${SERVICE_TYPE} AS build-production
 
 # - Create a "php" user to run PHP apps with it
-ONBUILD RUN addgroup --system php && adduser --no-create-home --system --ingroup php php && \
-    chown php:php -R /tmp
+ONBUILD RUN (getent group www-data || addgroup --system www-data ) && \
+    (id -u www-data || adduser --no-create-home --system --ingroup www-data www-data) && \
+    chown www-data:www-data -R /tmp
 
-# Reconfigure composer's cache dir
+# - Reconfigure composer's cache dir
 ONBUILD ENV COMPOSER_CACHE_DIR=/var/composer
 
 # - Install PHP and PHP Extension related dependencies
@@ -48,7 +49,7 @@ ONBUILD RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.ph
     php -r "unlink('composer-setup.php');" && \
     mv composer.phar /usr/local/bin/composer && \
     mkdir ${COMPOSER_CACHE_DIR} && \
-    chown -R php:php ${COMPOSER_CACHE_DIR}
+    chown -R www-data:www-data ${COMPOSER_CACHE_DIR}
 # - Configure PHP and Imagick
 ONBUILD COPY config/php.ini /usr/local/etc/php/conf.d/00-app.ini
 ONBUILD COPY config/imagick-policy.xml /etc/ImageMagick-6/policy.xml
@@ -65,10 +66,7 @@ ONBUILD EXPOSE 9100
 
 # Stage 3: Install and configure Nginx+Supervisor for SERVICE_TYPE
 FROM build-${APP_ENV} AS service-cli
-ONBUILD USER php
-
 FROM build-${APP_ENV} AS service-fpm
-ONBUILD USER php
 
 FROM build-${APP_ENV} AS service-fpm-nginx
 ARG DOCUMENT_ROOT
@@ -90,8 +88,7 @@ ONBUILD COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # - Let all services run as php user and ensure correct access rights
 ONBUILD RUN if [ -d "${DOCUMENT_ROOT}" ]; then rm -Rf ${DOCUMENT_ROOT}; fi && mkdir -p ${DOCUMENT_ROOT}
-ONBUILD RUN chown -R php:php ${DOCUMENT_ROOT} /run /var/lib/nginx /var/log/nginx
-ONBUILD USER php
+ONBUILD RUN chown -R www-data:www-data ${DOCUMENT_ROOT} /run /var/lib/nginx /var/log/nginx
 
 # - Expose Nginx
 ONBUILD WORKDIR ${DOCUMENT_ROOT}
@@ -103,3 +100,4 @@ ONBUILD HEALTHCHECK --timeout=10s CMD curl --silent --fail http://127.0.0.1:8080
 
 # Stage 4: Buld the final image
 FROM service-${SERVICE_TYPE}
+USER www-data:www-data
