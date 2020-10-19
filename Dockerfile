@@ -1,14 +1,11 @@
-# Build Args (pass to docker build with --build-arg=ARG_NAME=arg_value)
+# Build Args (pass to docker build with --build-arg ARG_NAME=arg_value)
 ARG PHP_VERSION=7.4.10
 ARG APP_ENV=dev
 ARG SERVICE_TYPE=cli
-ARG DOCUMENT_ROOT
-ARG CORS_ALLOWED_METHODS
-ARG CORS_ALLOWED_HEADERS
 
 FROM scratch
 
-MAINTAINER Torben Köhn <t.koehn@outlook.com>
+LABEL author="Torben Köhn <t.koehn@outlook.com>"
 
 # Stage 1: Select base images for SERVICE_TYPE
 FROM php:${PHP_VERSION}-buster AS php-cli
@@ -20,6 +17,15 @@ FROM php-fpm AS php-fpm-nginx
 
 # Stage 2: Install dependencies and configs for APP_ENV
 FROM php-${SERVICE_TYPE} AS build-production
+
+# - Create a "php" user to run PHP apps with it
+ONBUILD RUN (getent group www-data || addgroup --system www-data ) && \
+    (id -u www-data || adduser --no-create-home --system --ingroup www-data www-data) && \
+    chown www-data:www-data -R /tmp
+
+# - Reconfigure composer's cache dir
+ONBUILD ENV COMPOSER_CACHE_DIR=/var/composer
+
 # - Install PHP and PHP Extension related dependencies
 ONBUILD RUN apt-get update && apt-get install -y \
     gnupg curl sudo python git mariadb-client zip unzip p7zip \
@@ -41,45 +47,48 @@ ONBUILD RUN docker-php-ext-configure gd && \
 ONBUILD RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
     php composer-setup.php && \
     php -r "unlink('composer-setup.php');" && \
-    mv composer.phar /usr/local/bin/composer
+    mv composer.phar /usr/local/bin/composer && \
+    mkdir ${COMPOSER_CACHE_DIR} && \
+    chown -R www-data:www-data ${COMPOSER_CACHE_DIR}
 # - Configure PHP and Imagick
 ONBUILD COPY config/php.ini /usr/local/etc/php/conf.d/00-app.ini
 ONBUILD COPY config/imagick-policy.xml /etc/ImageMagick-6/policy.xml
 
 FROM build-production AS build-dev
+
 # - Install XDebug Extension
 ONBUILD RUN  pecl install xdebug && \
     docker-php-ext-enable xdebug
 # - Configure XDebug
 ONBUILD COPY config/php-dev.ini /usr/local/etc/php/conf.d/10-app-dev.ini
 
+ONBUILD EXPOSE 9100
+
 # Stage 3: Install and configure Nginx+Supervisor for SERVICE_TYPE
 FROM build-${APP_ENV} AS service-cli
-
 FROM build-${APP_ENV} AS service-fpm
 
 FROM build-${APP_ENV} AS service-fpm-nginx
-ENV DOCUMENT_ROOT ${DOCUMENT_ROOT:-/var/www/html}
-ENV CORS_ALLOWED_METHODS ${CORS_ALLOWED_METHODS:-GET,POST,PUT,PATCH,DELETE,OPTIONS}
-ENV CORS_ALLOWED_HEADERS ${CORS_ALLOWED_HEADERS:-DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,Authorization}
+ARG DOCUMENT_ROOT
+ARG CORS_ALLOWED_METHODS
+ARG CORS_ALLOWED_HEADERS
+ARG FALLBACK_ROUTER_PATH
+ONBUILD ENV DOCUMENT_ROOT ${DOCUMENT_ROOT:-/var/www/html}
+ONBUILD ENV CORS_ALLOWED_METHODS ${CORS_ALLOWED_METHODS:-GET,POST,PUT,PATCH,DELETE}
+ONBUILD ENV CORS_ALLOWED_HEADERS ${CORS_ALLOWED_HEADERS:-DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,Authorization}
+ONBUILD ENV FALLBACK_ROUTER_PATH ${FALLBACK_ROUTER_PATH:-index.php}
 
 # - Install Nginx and Supervisor
 ONBUILD RUN apt-get install -y nginx libnginx-mod-http-ndk libnginx-mod-http-lua supervisor
-
 # - Configure Nginx
 ONBUILD COPY config/nginx.conf /etc/nginx/nginx.conf
 
 # - Configure Supervisor
 ONBUILD COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# - Let all services run as user www-data
-ONBUILD RUN mkdir -p /var/www/html
-ONBUILD RUN chown -R www-data:www-data /var/www/html && \
-  chown -R www-data:www-data /run && \
-  chown -R www-data:www-data /var/lib/nginx && \
-  chown -R www-data:www-data /var/log/nginx
-
-ONBUILD USER www-data
+# - Let all services run as php user and ensure correct access rights
+ONBUILD RUN if [ -d "${DOCUMENT_ROOT}" ]; then rm -Rf ${DOCUMENT_ROOT}; fi && mkdir -p ${DOCUMENT_ROOT}
+ONBUILD RUN chown -R www-data:www-data ${DOCUMENT_ROOT} /run /var/lib/nginx /var/log/nginx
 
 # - Expose Nginx
 ONBUILD WORKDIR ${DOCUMENT_ROOT}
@@ -91,3 +100,4 @@ ONBUILD HEALTHCHECK --timeout=10s CMD curl --silent --fail http://127.0.0.1:8080
 
 # Stage 4: Buld the final image
 FROM service-${SERVICE_TYPE}
+USER www-data:www-data
